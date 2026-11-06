@@ -23,6 +23,22 @@
   --danger: #D14B4B;
   --sel: rgba(233, 163, 182, 0.18);
   --drop: rgba(233, 163, 182, 0.36);
+
+  /* コードの色（VS Code の Light+ に合わせる） */
+  --c-keyword: #0000FF;
+  --c-control: #AF00DB;
+  --c-string: #A31515;
+  --c-number: #098658;
+  --c-comment: #008000;
+  --c-function: #795E26;
+  --c-type: #267F99;
+  --c-variable: #001080;
+  --c-property: #0451A5;
+  --c-regexp: #811F3F;
+  --c-tag: #800000;
+  --c-attr: #E50000;
+  --c-add-bg: rgba(155, 185, 85, 0.22);
+  --c-del-bg: rgba(255, 0, 0, 0.14);
 }
 
 /* ダーク: 同じ考え方で、黒・グレーに桜色のアクセント */
@@ -44,6 +60,22 @@
   --danger: #E26D6D;
   --sel: rgba(233, 163, 182, 0.14);
   --drop: rgba(233, 163, 182, 0.28);
+
+  /* コードの色（VS Code の Dark+ に合わせる） */
+  --c-keyword: #569CD6;
+  --c-control: #C586C0;
+  --c-string: #CE9178;
+  --c-number: #B5CEA8;
+  --c-comment: #6A9955;
+  --c-function: #DCDCAA;
+  --c-type: #4EC9B0;
+  --c-variable: #9CDCFE;
+  --c-property: #9CDCFE;
+  --c-regexp: #D16969;
+  --c-tag: #569CD6;
+  --c-attr: #9CDCFE;
+  --c-add-bg: rgba(155, 185, 85, 0.2);
+  --c-del-bg: rgba(255, 0, 0, 0.2);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -64,6 +96,22 @@
     --danger: #E26D6D;
     --sel: rgba(233, 163, 182, 0.14);
     --drop: rgba(233, 163, 182, 0.28);
+
+    /* コードの色（VS Code の Dark+ に合わせる） */
+    --c-keyword: #569CD6;
+    --c-control: #C586C0;
+    --c-string: #CE9178;
+    --c-number: #B5CEA8;
+    --c-comment: #6A9955;
+    --c-function: #DCDCAA;
+    --c-type: #4EC9B0;
+    --c-variable: #9CDCFE;
+    --c-property: #9CDCFE;
+    --c-regexp: #D16969;
+    --c-tag: #569CD6;
+    --c-attr: #9CDCFE;
+    --c-add-bg: rgba(155, 185, 85, 0.2);
+    --c-del-bg: rgba(255, 0, 0, 0.2);
   }
 }
 
@@ -162,6 +210,30 @@ svg { display: block; }
 .doc code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.88em; background: var(--panel); padding: 0.1em 0.35em; border-radius: 4px; }
 .doc pre { background: var(--panel); padding: 14px 16px; border-radius: 8px; overflow-x: auto; line-height: 1.6; }
 .doc pre code { background: none; padding: 0; }
+
+/* コードの色分け（highlight.js の分類 → VS Code の配色） */
+.hljs-keyword, .hljs-literal, .hljs-symbol, .hljs-meta .hljs-keyword { color: var(--c-keyword); }
+.hljs-built_in, .hljs-type, .hljs-title.class_, .hljs-title.class_.inherited__ { color: var(--c-type); }
+.hljs-title.function_, .hljs-title { color: var(--c-function); }
+.hljs-string, .hljs-meta .hljs-string, .hljs-char.escape_ { color: var(--c-string); }
+.hljs-number { color: var(--c-number); }
+.hljs-comment, .hljs-quote { color: var(--c-comment); font-style: italic; }
+.hljs-doctag { color: var(--c-comment); font-weight: 600; }
+.hljs-variable, .hljs-params, .hljs-template-variable, .hljs-variable.language_ { color: var(--c-variable); }
+.hljs-variable.language_ { color: var(--c-keyword); }
+.hljs-attr, .hljs-property { color: var(--c-property); }
+.hljs-attribute { color: var(--c-attr); }
+.hljs-regexp, .hljs-link { color: var(--c-regexp); }
+.hljs-tag, .hljs-name, .hljs-selector-tag { color: var(--c-tag); }
+.hljs-selector-class, .hljs-selector-id, .hljs-selector-attr, .hljs-selector-pseudo { color: var(--c-type); }
+.hljs-meta, .hljs-keyword.control_ { color: var(--c-control); }
+.hljs-section { color: var(--c-keyword); font-weight: 600; }
+.hljs-bullet { color: var(--c-number); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 600; }
+.hljs-addition { background: var(--c-add-bg); }
+.hljs-deletion { background: var(--c-del-bg); }
+.hljs-subst, .hljs-punctuation, .hljs-operator { color: inherit; }
 .doc table { border-collapse: collapse; display: block; overflow-x: auto; }
 .doc th, .doc td { border: 1px solid var(--line); padding: 6px 12px; }
 .doc blockquote { border-left: 3px solid var(--line); margin-left: 0; padding-left: 14px; color: var(--muted); }

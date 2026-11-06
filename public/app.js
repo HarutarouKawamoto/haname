@@ -56,7 +56,14 @@ const S = {
 };
 
 // ---------- Markdown ----------
-const md = window.markdownit({ html: false, linkify: true });
+// コードブロックの色分け（言語名が書いてあり、highlight.js が知っている言語だけ。結果はエスケープ済みの HTML）
+function highlight(code, lang) {
+  const hljs = window.hljs;
+  const name = (lang || '').trim().toLowerCase();
+  if (!hljs || !name || !hljs.getLanguage(name)) return '';
+  try { return hljs.highlight(code, { language: name, ignoreIllegals: true }).value; } catch { return ''; }
+}
+const md = window.markdownit({ html: false, linkify: true, highlight });
 md.core.ruler.push('mdv_srcline', (state) => {
   for (const t of state.tokens) {
     if (t.map && t.level === 0 && t.nesting !== -1) {
@@ -65,7 +72,7 @@ md.core.ruler.push('mdv_srcline', (state) => {
     }
   }
 });
-const mdPlain = window.markdownit({ html: false, linkify: true });
+const mdPlain = window.markdownit({ html: false, linkify: true, highlight });
 
 const posix = {
   dirname: (p) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : ''),
@@ -728,7 +735,8 @@ function onDocClick(e) {
     openComposer(answerCard, range, { sentence, draft, parentId: answerCard.dataset.id });
     return;
   }
-  const top = container.closest('[data-line]');
+  // コードブロックは <pre><code data-line> の形で、行番号の印が内側の <code> に付く
+  const top = container.closest('[data-line]') ?? container.querySelector(':scope > [data-line]');
   if (!top || top.closest('.qa')) return deselect();
   const blockLine = Number(top.dataset.line);
   const headings = $$('h1[data-line], h2[data-line], h3[data-line], h4[data-line], h5[data-line], h6[data-line]', $('#doc'))

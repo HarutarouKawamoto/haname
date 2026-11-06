@@ -18,6 +18,7 @@ const HELP = `HanaME（花見）— AI が書いた .md を読み、まとめて
   haname [フォルダ | ファイル.md]      ビューアを起動する（起動済みならそのまま使う）
       --port <番号>                    ポート番号（初期値 4747）
       --no-open                        ブラウザを開かない
+      --ai-files                       AI ツールの設定・指示のファイル（.claude/ や CLAUDE.md など）も表示する
   haname prompt [--full] [フォルダ]    未回答の質問をまとめた AI への指示文を出力する
                                        --full でファイルの中身も含める（ブラウザのチャット向け）
   haname init [フォルダ]               .gitignore に .haname/ を追加し、
@@ -160,7 +161,7 @@ async function cmdStart() {
     const inside = !path.relative(cwd, target).startsWith('..');
     root = inside ? cwd : path.dirname(target);
   }
-  const app = createServer(root);
+  const app = createServer(root, { aiFiles: flags.has('--ai-files') });
   let actual;
   for (let p = port; p < port + 20; p++) {
     try {

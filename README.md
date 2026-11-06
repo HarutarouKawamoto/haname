@@ -102,12 +102,14 @@ haname init
 | ツリーのファイルをクリック | そのファイルを開く |
 | 目次の見出しをクリック | その見出しへ移動 |
 
+コードブロックは、言語名（` ```ts ` など）が書いてあれば VS Code と同じ配色で色分けされます（明るいテーマは Light+、暗いテーマは Dark+）。
+
 ### 質問する（壁打ち）
 
 | 操作 | 動き |
 |---|---|
 | 文にマウスを乗せる | 文単位でハイライト |
-| 文をクリック | その文への質問欄が開く（Ctrl+Enter で書き込み、Esc でやめる） |
+| 文をクリック | その文への質問欄が開く（Ctrl+Enter で書き込み、Esc でやめる）。コードブロックは1行ずつ |
 | 文字をなぞってクリック | `「〇〇」とは？` の下書き付きで質問欄が開く |
 | 回答の中の文をクリック | 追加の質問（スレッド）になる |
 | 質問・回答の番号をクリック | 対応する回答・質問へジャンプ |
@@ -175,7 +177,7 @@ AI などが後から書き換えたファイルは、Ctrl+Z でも戻しませ�
 | `haname clean [ファイル…] [--dry-run]` | Q&A を取り除く。省略時はフォルダ内すべて。元の内容は `.haname/backup/` に残る |
 | `haname check [ファイル…] [--staged]` | Q&A が残っていれば一覧を出して失敗（終了コード 1）で終わる。`--staged` は git のステージ済みの内容を調べる |
 
-起動オプション: `--port <番号>`（初期値 4747）/ `--no-open`（ブラウザを開かない）
+起動オプション: `--port <番号>`（初期値 4747）/ `--no-open`（ブラウザを開かない）/ `--ai-files`（AI ツールの設定・指示のファイルも表示する）
 
 ### AI に壁打ちを任せる
 
@@ -226,7 +228,13 @@ haname check --staged
 
 `.haname/` は `.gitignore` に入れておいてください（`haname init` で自動追加されます）。
 
-ツリーには、`node_modules`・`.git`・`.haname`・`.claude`（AI ツールの設定の置き場）と `.gitignore` の対象は表示されません。
+ツリーには、`node_modules`・`.git`・`.haname` と `.gitignore` の対象は表示されません。
+
+AI ツールの設定・指示のファイルも、初期設定では表示しません（`--ai-files` を付けて起動すると表示します）。
+
+- フォルダ: `.claude`・`.cursor`・`.windsurf`・`.codex`・`.gemini`・`.agents`・`.clinerules`・`.roo`・`.continue`・`.kiro`・`.junie`・`.amazonq`・`.augment`・`.opencode`
+- ファイル: `CLAUDE.md`・`CLAUDE.local.md`・`AGENTS.md`・`AGENT.md`・`GEMINI.md`（どのフォルダにあっても）
+- `.github` の中の `copilot-instructions.md`・`instructions/`・`prompts/`・`agents/`・`chatmodes/`
 
 ---
 
@@ -255,7 +263,7 @@ public/           画面（index.html / app.js / style.css / boot.js / brand/）
 docs/SPEC.md      仕様
 ```
 
-依存パッケージ: [markdown-it](https://github.com/markdown-it/markdown-it)（Markdown の描画）、[lucide-static](https://lucide.dev/)（アイコン）、[ignore](https://github.com/kaelzhang/node-ignore)（.gitignore の判定）
+依存パッケージ: [markdown-it](https://github.com/markdown-it/markdown-it)（Markdown の描画）、[lucide-static](https://lucide.dev/)（アイコン）、[ignore](https://github.com/kaelzhang/node-ignore)（.gitignore の判定）、[highlight.js](https://highlightjs.org/)（コードの色分け）
 
 ## ライセンス
 
