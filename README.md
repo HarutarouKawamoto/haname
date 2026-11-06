@@ -11,6 +11,11 @@
 
 <!-- 紹介動画: GitHub の編集画面でこの行の下に haname-pv.mp4 をドラッグすると、動画が添付されて埋め込まれる -->
 
+
+Uploading haname-pv.mp4…
+
+
+
 <p align="center"><sub>紹介動画の BGM：<a href="https://opentracks.com/bgm/detail/23966">或る雨の夜</a> / のる（OpenTracks）</sub></p>
 
 <p align="center">
