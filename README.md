@@ -256,7 +256,6 @@ AI ツールの設定・指示のファイルも、初期設定では表示し�
 ```
 bin/haname.js     CLI（起動・prompt・init・clean・check）
 skills/           AI 用のスキル（haname init で .claude/skills/ に置く）
-scripts/pv/       紹介 PV の録画スクリプト（node scripts/pv/record.mjs。BGM は scripts/pv/bgm.mp3 に置く）
 lib/server.js     ローカルサーバー（ファイル一覧・読み書き・変更通知・移動・元に戻す）
 lib/qa.js         Q&A ブロックの読み取り・追加・削除、編集時の本文と Q&A の分離・再合成
 lib/prompt.js     AI への指示文（画面と CLI で共通）

@@ -15,6 +15,5 @@ Thumbs.db
 # デスクトップ版（別の非公開リポジトリ haname-desktop）
 haname-desktop/
 
-# 紹介 PV の出力
-scripts/pv/out/
-scripts/pv/bgm.mp3
+# 紹介 PV（録画スクリプト・BGM・動画は手元だけで管理する）
+scripts/pv/
