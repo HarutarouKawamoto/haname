@@ -3,7 +3,7 @@
 //
 //   haname [フォルダ | ファイル.md]   ビューアを起動（起動済みならそれを使う）
 //   haname prompt [--full] [フォルダ]  未回答の質問をまとめた AI への指示文を出力
-//   haname init [フォルダ]             .gitignore と CLAUDE.md / AGENTS.md を準備
+//   haname init [フォルダ]             .gitignore・CLAUDE.md / AGENTS.md・AI 用スキルを準備
 //   haname clean [ファイル…] [--dry-run]  Q&A を取り除く
 //   haname check [ファイル…] [--staged]   Q&A が残っていたら失敗で終わる
 import { spawn, execFileSync } from 'node:child_process';
@@ -21,7 +21,8 @@ const HELP = `HanaME（花見）— AI が書いた .md を読み、まとめて
   haname prompt [--full] [フォルダ]    未回答の質問をまとめた AI への指示文を出力する
                                        --full でファイルの中身も含める（ブラウザのチャット向け）
   haname init [フォルダ]               .gitignore に .haname/ を追加し、
-                                       CLAUDE.md / AGENTS.md に Q&A のルールを書き足す
+                                       CLAUDE.md / AGENTS.md に Q&A のルールを書き足し、
+                                       .claude/skills/ に質問に回答するスキルを置く
   haname clean [ファイル…] [--dry-run]  Q&A を取り除く（省略時はフォルダ内すべて）
   haname check [ファイル…] [--staged]   Q&A が残っている .md があれば知らせて失敗で終わる
                                        --staged で git のステージ済みの内容を調べる`;
@@ -205,11 +206,33 @@ function rulesBlock() {
     '',
     'このリポジトリの .md には、HanaME で書き込まれた質問（`> [!QUESTION]`）と回答欄（`> [!ANSWER]`）があります。',
     '',
-    '- 「質問に答えて」と頼まれたら、`haname prompt`（入っていなければ `npx haname prompt`）を実行し、出力された指示に従ってください。',
+    // npx は使わせない: npm に未公開のため、同じ名前の別パッケージを実行してしまうおそれがある
+    '- 「質問に答えて」と頼まれたら、haname-answer スキルがあればそれを使ってください。無ければ `haname prompt` を実行し、出力された指示に従ってください（`npx haname` は使わないでください）。',
     ...RULES.map((r) => `- ${r}`),
     '- 頼まれない限り、`> [!QUESTION]` と `> [!ANSWER]` のブロックを削除・移動しないでください。',
     MARK_END,
   ].join('\n');
+}
+
+const SKILL_SRC = new URL('../skills/haname-answer/SKILL.md', import.meta.url);
+const SKILL_DEST = path.join('.claude', 'skills', 'haname-answer', 'SKILL.md');
+const MANAGED = '<!-- haname:managed';
+
+/** AI 用のスキル（Claude Code 向け）を置く。自分で書き換えたもの（印が無いもの）は上書きしない */
+function installSkill(root) {
+  const dest = path.join(root, SKILL_DEST);
+  const src = fs.readFileSync(SKILL_SRC, 'utf8');
+  const label = SKILL_DEST.replaceAll('\\', '/');
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.writeFileSync(dest, src);
+    return `${label}: 質問に回答するスキルを置きました`;
+  }
+  const cur = fs.readFileSync(dest, 'utf8');
+  if (!cur.includes(MANAGED)) return `${label}: 書き換えられているため、そのままにしました`;
+  if (cur === src) return `${label}: すでに最新です`;
+  fs.writeFileSync(dest, src);
+  return `${label}: 最新にしました`;
 }
 
 async function cmdInit() {
@@ -229,21 +252,37 @@ async function cmdInit() {
   // CLAUDE.md / AGENTS.md（あるものすべて。どちらもなければ CLAUDE.md を作る）
   let targets = ['CLAUDE.md', 'AGENTS.md'].filter((n) => fs.existsSync(path.join(root, n)));
   if (!targets.length) targets = ['CLAUDE.md'];
+  const warn = [];
   for (const name of targets) {
     const file = path.join(root, name);
     const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
-    const block = rulesBlock();
+    // 元のファイルの改行コードに合わせる
+    const eol = text.includes('\r\n') ? '\r\n' : '\n';
+    const block = rulesBlock().replaceAll('\n', eol);
+    const s = text.indexOf(MARK_START);
+    const e = text.indexOf(MARK_END);
+    const count = (m) => text.split(m).length - 1;
     let next;
-    if (text.includes(MARK_START) && text.includes(MARK_END)) {
-      next = text.slice(0, text.indexOf(MARK_START)) + block + text.slice(text.indexOf(MARK_END) + MARK_END.length);
+    if (s === -1 && e === -1) {
+      next = text ? `${text.replace(/\s*$/, '')}${eol}${eol}${block}${eol}` : `${block}${eol}`;
+      done.push(`${name}: HanaME のルールを${text ? '書き足しました' : '書いて作成しました'}`);
+    } else if (s !== -1 && e > s && count(MARK_START) === 1 && count(MARK_END) === 1) {
+      next = text.slice(0, s) + block + text.slice(e + MARK_END.length);
       done.push(`${name}: HanaME のルールを最新にしました`);
     } else {
-      next = text ? `${text.replace(/\s*$/, '')}\n\n${block}\n` : `${block}\n`;
-      done.push(`${name}: HanaME のルールを${text ? '書き足しました' : '書いて作成しました'}`);
+      // 印が片方だけ・順番が逆・複数ある: どこまでが HanaME の部分か分からないので触らない
+      warn.push(`${name}: ${MARK_START} と ${MARK_END} の組が崩れているため、変更しませんでした。印を1組に直すか、両方消してからもう一度実行してください`);
+      continue;
     }
     fs.writeFileSync(file, next);
   }
+
+  done.push(installSkill(root));
   console.log(done.map((d) => `✓ ${d}`).join('\n'));
+  if (warn.length) {
+    console.error(warn.map((w) => `! ${w}`).join('\n'));
+    process.exitCode = 1;
+  }
 }
 
 // ---------- haname clean ----------

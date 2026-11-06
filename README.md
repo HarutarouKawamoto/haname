@@ -59,7 +59,11 @@ haname
 haname init
 ```
 
-`.gitignore` に作業フォルダ（`.haname/`）を追加し、`CLAUDE.md` / `AGENTS.md` に Q&A のルールを書き足します。以降は AI に「質問に答えて」と言うだけで通じるようになります。
+次の3つを準備します。以降は AI に「HanaME の質問に答えて」と言うだけで通じるようになります。
+
+- `.gitignore` に作業フォルダ（`.haname/`）を追加する
+- `CLAUDE.md` / `AGENTS.md` に Q&A のルールを書き足す。既にあるファイルは、元の内容を残して末尾に足す
+- `.claude/skills/haname-answer/` に、質問に回答する AI 用のスキルを置く（下の「AI 用のスキル」参照）
 
 ---
 
@@ -167,7 +171,7 @@ AI などが後から書き換えたファイルは、Ctrl+Z でも戻しませ�
 | `haname [フォルダ]` | ビューアを起動する。そのフォルダで起動済みなら、それを開くだけ |
 | `haname docs/plan.md` | そのファイルを開いた状態で起動する。起動済みなら、開いている画面がそのファイルに切り替わる |
 | `haname prompt [--full]` | 未回答の質問をまとめた AI への指示文を出力する（`--full` で中身も含める） |
-| `haname init` | `.gitignore` に `.haname/` を追加し、`CLAUDE.md` / `AGENTS.md` に Q&A のルールを書き足す（何度実行しても重複しない） |
+| `haname init` | `.gitignore` に `.haname/` を追加し、`CLAUDE.md` / `AGENTS.md` に Q&A のルールを書き足し、AI 用のスキルを置く（何度実行しても重複しない） |
 | `haname clean [ファイル…] [--dry-run]` | Q&A を取り除く。省略時はフォルダ内すべて。元の内容は `.haname/backup/` に残る |
 | `haname check [ファイル…] [--staged]` | Q&A が残っていれば一覧を出して失敗（終了コード 1）で終わる。`--staged` は git のステージ済みの内容を調べる |
 
@@ -177,7 +181,23 @@ AI などが後から書き換えたファイルは、Ctrl+Z でも戻しませ�
 
 `haname init` をしておけば、AI ツールにこう頼むだけで済みます。
 
-> `haname prompt` を実行して、その指示に従って質問に答えて
+> HanaME の質問に答えて
+
+### AI 用のスキル
+
+`haname init` は、[Claude Code](https://claude.com/claude-code) などのスキル（SKILL.md）に対応した AI ツール向けに、`.claude/skills/haname-answer/SKILL.md` を置きます。元のファイルは [skills/haname-answer/SKILL.md](skills/haname-answer/SKILL.md) です。
+
+スキルがあると、AI は「質問に答えて」と頼まれたときだけ手順を読み込み、自分で未回答の質問を探して回答欄に書き込みます。指示文をコピーして貼る手間がいりません。
+
+- すべてのプロジェクトで使いたいときは、`~/.claude/skills/haname-answer/` にコピーしてください。
+- `haname init` を実行し直すと、最新の内容に置き換わります。自分で書き換えて使うときは、ファイル内の `<!-- haname:managed` の行を消してください。消したファイルは上書きしません。
+- スキルに対応していない AI ツールのために、`CLAUDE.md` / `AGENTS.md` にも同じルールを書いています。
+
+### CLAUDE.md / AGENTS.md への書き込み
+
+- 書き込む部分は `<!-- haname:start -->` と `<!-- haname:end -->` で囲みます。実行し直すと、囲みの中だけを最新にします。囲みの外には触れません。
+- 両方あれば両方に、どちらもなければ `CLAUDE.md` を作って書きます。改行コード（CRLF / LF）は元のファイルに合わせます。
+- 囲みの印が片方だけ・複数・順番が逆のときは、どこまでが HanaME の部分か分からないため、そのファイルは変更せずに知らせます。
 
 ### コミット前に Q&A の消し忘れを防ぐ
 
@@ -185,8 +205,10 @@ AI などが後から書き換えたファイルは、Ctrl+Z でも戻しませ�
 
 ```bash
 #!/bin/sh
-npx haname check --staged
+haname check --staged
 ```
+
+`haname` コマンドが使える状態（`npm link` 済み）にしておいてください。npm に公開するまでは `npx haname` と書かないでください。同じ名前の別のパッケージを実行してしまうおそれがあります。
 
 ---
 
@@ -223,6 +245,7 @@ npx haname check --staged
 
 ```
 bin/haname.js     CLI（起動・prompt・init・clean・check）
+skills/           AI 用のスキル（haname init で .claude/skills/ に置く）
 lib/server.js     ローカルサーバー（ファイル一覧・読み書き・変更通知・移動・元に戻す）
 lib/qa.js         Q&A ブロックの読み取り・追加・削除、編集時の本文と Q&A の分離・再合成
 lib/prompt.js     AI への指示文（画面と CLI で共通）

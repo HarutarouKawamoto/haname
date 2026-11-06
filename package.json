@@ -15,6 +15,7 @@
     "bin/",
     "lib/",
     "public/",
+    "skills/",
     "README.md"
   ],
   "type": "module",
