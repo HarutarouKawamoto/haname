@@ -91,6 +91,7 @@ async function init() {
   $('#toggle-qa').onclick = () => setHideQA(!document.body.classList.contains('hide-qa'));
   setupTheme();
   setupSide();
+  setupDesktop();
   $('#edit').onclick = enterEdit;
   $('#edit-save').onclick = saveEdit;
   $('#edit-cancel').onclick = cancelEdit;
@@ -138,6 +139,19 @@ function setupTheme() {
 }
 
 // ページ移動ボタンを含むファイル一覧（右パネル）の開閉。閉じても ← → でめくれる
+// デスクトップ版（HanaME Desktop）の中で動いているときだけ、ロゴを「起動画面に戻る」ボタンにする
+function setupDesktop() {
+  const desk = window.hanameDesktop;
+  if (!desk) return;
+  const brand = $('.brand');
+  brand.classList.add('is-button');
+  brand.setAttribute('role', 'button');
+  brand.setAttribute('tabindex', '0');
+  brand.setAttribute('aria-label', '起動画面に戻る');
+  brand.onclick = () => desk.showLauncher();
+  brand.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); desk.showLauncher(); } };
+}
+
 function setupSide() {
   const btn = $('#toggle-side');
   const root = document.documentElement;

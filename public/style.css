@@ -87,6 +87,9 @@ svg { display: block; }
 #bar > .group { justify-self: end; }
 .brand { justify-self: start; display: flex; align-items: center; padding-left: 2px; user-select: none; }
 .logo { display: block; height: 30px; width: auto; -webkit-user-drag: none; }
+.brand.is-button { cursor: pointer; border-radius: 8px; padding: 2px 6px; margin-left: -4px; }
+.brand.is-button:hover { background: var(--sel); }
+.brand.is-button:focus-visible { outline: 2px solid var(--sakura); outline-offset: 2px; }
 /* 夜桜では文字を明るくした版に差し替える */
 .logo-dark { display: none; }
 :root[data-theme="dark"] .logo-light { display: none; }

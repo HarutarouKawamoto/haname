@@ -11,3 +11,6 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# デスクトップ版（別の非公開リポジトリ haname-desktop）
+haname-desktop/
