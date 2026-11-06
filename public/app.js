@@ -415,20 +415,6 @@ function renderDoc() {
   hl('mdv-target', []);
   doc.innerHTML = md.render(text);
 
-  // 相対リンク・画像
-  const base = posix.dirname(S.current);
-  for (const a of $$('a[href]', doc)) {
-    const href = a.getAttribute('href');
-    if (/^[a-z]+:/i.test(href)) { a.target = '_blank'; a.rel = 'noopener'; continue; }
-    if (href.startsWith('#')) continue;
-    const target = posix.join(base, safeDecode(href.split('#')[0]));
-    if (/\.md$/i.test(target)) a.onclick = (e) => { e.preventDefault(); openFile(target); };
-  }
-  for (const img of $$('img[src]', doc)) {
-    const src = img.getAttribute('src');
-    if (!/^[a-z]+:/i.test(src)) img.src = '/api/raw?path=' + encodeURIComponent(posix.join(base, safeDecode(src)));
-  }
-
   // Q&A ブロックをカードに差し替える
   const ids = new Set(blocks.map((b) => b.id));
   for (const b of blocks) {
@@ -455,6 +441,20 @@ function renderDoc() {
     card.append(h('div', { class: 'qa-body', html: b.body ? mdPlain.render(b.body) : '' }));
     el.replaceWith(card);
   }
+  // 相対リンク・画像（Q&A のカードの中も対象にするため、カードを作った後に処理する）
+  const base = posix.dirname(S.current);
+  for (const a of $$('a[href]', doc)) {
+    const href = a.getAttribute('href');
+    if (/^[a-z]+:/i.test(href)) { a.target = '_blank'; a.rel = 'noopener'; continue; }
+    if (href.startsWith('#')) continue;
+    const target = posix.join(base, safeDecode(href.split('#')[0]));
+    if (/\.md$/i.test(target)) a.onclick = (e) => { e.preventDefault(); openFile(target); };
+  }
+  for (const img of $$('img[src]', doc)) {
+    const src = img.getAttribute('src');
+    if (!/^[a-z]+:/i.test(src)) img.src = '/api/raw?path=' + encodeURIComponent(posix.join(base, safeDecode(src)));
+  }
+
   applyFold();
   markAsked();
   paintStrip();
