@@ -158,12 +158,11 @@ async function renderMermaid(root = $('#doc')) {
     const box = h('div', { class: 'mmd' });
     const toggle = h('button', { class: 'icon-btn mmd-toggle' });
     toggle.onclick = () => setMmdSource(box, !box.classList.contains('show-src'));
+    const zoom = h('button', { class: 'icon-btn zoom-btn', 'aria-label': '拡大して見る', html: icon('maximize-2') });
+    zoom.onclick = () => openZoom(box.classList.contains('show-src') ? pre : box.querySelector('.mmd-view svg') ?? pre);
     pre.before(box);
-    box.append(toggle, h('div', { class: 'mmd-view' }), pre);
-    // 図のコードの行に質問が付いているときは、コードを表示して始める
-    const q = box.nextElementSibling;
-    const target = q?.classList.contains('qa-q') ? q.querySelector('.qa-target')?.textContent : '';
-    setMmdSource(box, !!target && code.textContent.includes(target));
+    box.append(h('div', { class: 'mmd-tools' }, zoom, toggle), h('div', { class: 'mmd-view' }), pre);
+    setMmdSource(box, false);
   }
   const boxes = $$('.mmd', root);
   if (!boxes.length) return;
@@ -192,11 +191,188 @@ async function renderMermaid(root = $('#doc')) {
         a.removeAttribute('href');
         a.removeAttributeNS('http://www.w3.org/1999/xlink', 'href');
       }
+      // 図に付いた質問の印。図の上で見つからない質問（設定の行など）だけなら、コードの表示にする
+      const asked = mmdQuestions(box);
+      if (asked.length && !markMmdAsked(box, asked)) setMmdSource(box, true);
     } catch {
       document.getElementById('d' + id)?.remove(); // 失敗したときに Mermaid が残す一時的な要素
       if (box.isConnected) fail(box, '図の書き方に誤りがあります');
     }
   }
+}
+
+// ---------- 図への質問 ----------
+// 図の部品（箱・矢印のラベル・登場人物など）をクリックすると、その文字を含むコードの行を対象に質問する。
+// 何もないところをクリックしたときは、図全体（コードの 1 行目）が対象。質問はコードブロックの直後に入る。
+const MMD_PART = 'g.node, g.edgeLabel, g.cluster, text';
+const mmdLabel = (el) => el.textContent.replace(/\s+/g, ' ').trim();
+function mmdPartAt(target, view) {
+  let el = target.closest(MMD_PART);
+  if (!el || !view.contains(el)) {
+    // 四角などの図形をクリックしたとき: 同じグループの短い文字を部品とみなす（シーケンス図の登場人物など）
+    const g = target.closest('g');
+    el = g && view.contains(g) && !g.querySelector('g.node') && mmdLabel(g).length <= 60 ? g : null;
+  }
+  return el && mmdLabel(el) ? el : null;
+}
+const mmdLines = (box) => box.querySelector('pre code').textContent.split('\n').map((l) => l.trim()).filter(Boolean);
+function mmdSourceLine(box, label) {
+  const lines = mmdLines(box);
+  if (!label) return lines[0] ?? '';
+  const esc = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // 箱の定義（A[ラベル]、B{ラベル} など）は、その部分だけを対象にする
+  const shape = new RegExp(String.raw`[\w-]+\s*[\[({>]+\s*"?${esc}"?\s*[\])}]+`);
+  for (const l of lines) { const m = l.match(shape); if (m) return m[0]; }
+  // 矢印のラベル（-- ラベル -->、-->|ラベル|）も、その部分だけ
+  const edge = new RegExp(String.raw`(--|==|-\.)\s*${esc}\s*(-->|==>|\.->|---|--)|\|\s*${esc}\s*\|`);
+  for (const l of lines) { const m = l.match(edge); if (m) return m[0]; }
+  // 矢印のラベル（-- ラベル -->、|ラベル|）や登場人物（participant X as ラベル）は、その行
+  const defines = new RegExp(String.raw`(--\s*|\|\s*|\bas\s+|^(participant|actor)\s+|:\s*)${esc}`);
+  return lines.find((l) => defines.test(l)) ?? lines.find((l) => l.includes(label))
+    ?? lines.find((l) => label.split(' ').every((w) => l.includes(w))) ?? label;
+}
+// この図に付いている質問の対象（図の直後に並ぶ質問）
+function mmdQuestions(box) {
+  const out = [];
+  for (let el = box.nextElementSibling; el?.classList.contains('qa'); el = el.nextElementSibling) {
+    const t = el.classList.contains('qa-q') && el.querySelector('.qa-target')?.textContent;
+    if (t) out.push(t);
+  }
+  return out;
+}
+function markMmdAsked(box, targets) {
+  const view = box.querySelector('.mmd-view');
+  const first = mmdLines(box)[0];
+  let found = false;
+  if (targets.includes(first)) { view.classList.add('mmd-asked-all'); found = true; }
+  const parts = [...view.querySelectorAll(MMD_PART)].map((el) => ({ el, label: mmdLabel(el) })).filter((p) => p.label);
+  for (const t of targets) {
+    if (t === first) continue;
+    // 対象に含まれる部品のうち、もっと長い部品の一部になっているもの（「在庫はある?」の中の「ある」など）は除く
+    const hits = parts.filter((p) => t.includes(p.label));
+    for (const p of hits) {
+      if (hits.some((o) => o.label.length > p.label.length && o.label.includes(p.label))) continue;
+      p.el.classList.add('mmd-asked');
+      found = true;
+    }
+  }
+  return found;
+}
+let mmdHover = null;
+function setMmdHover(el) {
+  if (mmdHover === el) return;
+  mmdHover?.classList.remove('mmd-hover');
+  mmdHover = el;
+  el?.classList.add('mmd-hover');
+}
+function askAboutDiagram(box, part) {
+  const sentence = mmdSourceLine(box, part ? mmdLabel(part) : '');
+  const answerCard = box.closest('.qa-a');
+  if (answerCard) openComposer(answerCard, null, { sentence, draft: '', parentId: answerCard.dataset.id });
+  else {
+    const code = box.querySelector('pre code');
+    openComposer(box, null, { sentence, draft: '', blockEnd: Number(code.dataset.end), headingLine: headingLineFor(Number(code.dataset.line)) });
+  }
+  // 質問中の部品を示す（質問欄を開くと印が消えるので、開いた後に付ける）
+  (part ?? box.querySelector('.mmd-view')).classList.add('mmd-target');
+}
+
+// ---------- 拡大表示（表・図・画像） ----------
+// 右上のボタンで、画面いっぱいに拡大して見る。ホイールで拡大・縮小、ドラッグで移動、Esc で閉じる。
+function setupZoomables(root) {
+  const add = (el, inline) => {
+    if (el.parentElement?.classList.contains('zoom-wrap')) return;
+    const btn = h('button', { class: 'icon-btn zoom-btn', 'aria-label': '拡大して見る', html: icon('maximize-2') });
+    btn.onclick = () => openZoom(el);
+    const wrap = h(inline ? 'span' : 'div', { class: 'zoom-wrap' + (inline ? ' inline' : '') });
+    el.before(wrap);
+    wrap.append(el, btn);
+  };
+  for (const t of $$('table', root)) add(t, false);
+  for (const img of $$('img', root)) if (!img.closest('a, .zoom-wrap')) add(img, true);
+}
+
+const Z = { el: null, s: 1, x: 0, y: 0, fit: 1, drag: null };
+function zoomApply() {
+  Z.el.querySelector('.zoom-content').style.transform = `translate(${Z.x}px, ${Z.y}px) scale(${Z.s})`;
+}
+function zoomTo(s, cx = innerWidth / 2, cy = innerHeight / 2) {
+  const next = Math.min(12, Math.max(0.1, s));
+  Z.x = cx - (cx - Z.x) * (next / Z.s);
+  Z.y = cy - (cy - Z.y) * (next / Z.s);
+  Z.s = next;
+  zoomApply();
+}
+function zoomFit() {
+  const c = Z.el.querySelector('.zoom-content');
+  const w = c.offsetWidth;
+  const hgt = c.offsetHeight;
+  Z.s = Z.fit;
+  Z.x = (innerWidth - w * Z.s) / 2;
+  Z.y = (innerHeight - 64 - hgt * Z.s) / 2;
+  zoomApply();
+}
+const isZoomOpen = () => !!Z.el && !Z.el.hidden;
+function closeZoom() { if (Z.el) { Z.el.hidden = true; Z.el.querySelector('.zoom-content').replaceChildren(); } }
+function openZoom(src) {
+  if (!Z.el) {
+    const content = h('div', { class: 'zoom-content doc' });
+    const btn = (name, label, fn) => { const b = h('button', { class: 'icon-btn', 'aria-label': label, html: icon(name) }); b.onclick = fn; return b; };
+    const bar = h('div', { class: 'zoom-bar' },
+      btn('zoom-out', '縮小', () => zoomTo(Z.s / 1.25)),
+      btn('scan', '画面に合わせる', zoomFit),
+      btn('zoom-in', '拡大', () => zoomTo(Z.s * 1.25)),
+      btn('x', '閉じる', closeZoom));
+    Z.el = h('div', { class: 'zoom', hidden: true }, content, bar);
+    document.body.append(Z.el);
+    Z.el.addEventListener('wheel', (e) => { e.preventDefault(); zoomTo(Z.s * (e.deltaY < 0 ? 1.12 : 1 / 1.12), e.clientX, e.clientY); }, { passive: false });
+    Z.el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || e.target.closest('.zoom-bar')) return;
+      Z.drag = { x: e.clientX, y: e.clientY, ox: Z.x, oy: Z.y, moved: false };
+      Z.el.setPointerCapture(e.pointerId);
+    });
+    Z.el.addEventListener('pointermove', (e) => {
+      if (!Z.drag) return;
+      const dx = e.clientX - Z.drag.x;
+      const dy = e.clientY - Z.drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) Z.drag.moved = true;
+      Z.x = Z.drag.ox + dx;
+      Z.y = Z.drag.oy + dy;
+      zoomApply();
+    });
+    Z.el.addEventListener('pointerup', (e) => {
+      const d = Z.drag;
+      Z.drag = null;
+      // 動かさずに背景をクリックしたら閉じる
+      if (d && !d.moved && !e.target.closest('.zoom-content, .zoom-bar')) closeZoom();
+    });
+  }
+  const c = Z.el.querySelector('.zoom-content');
+  const clone = src.cloneNode(true);
+  if (clone.tagName === 'svg') {
+    // 図は元の大きさ（viewBox）で置き、拡大はまとめて行う
+    const vb = src.viewBox?.baseVal;
+    clone.removeAttribute('style');
+    if (vb?.width) { clone.setAttribute('width', vb.width); clone.setAttribute('height', vb.height); }
+  }
+  c.replaceChildren(clone);
+  Z.el.hidden = false;
+  Z.s = 1; Z.x = 0; Z.y = 0;
+  zoomApply();
+  const w = c.offsetWidth;
+  const hgt = c.offsetHeight;
+  // 画面に収まる倍率。小さな表や画像は大きくしすぎない
+  const max = clone.tagName === 'svg' ? 4 : 2;
+  Z.fit = Math.min(max, (innerWidth - 80) / w, (innerHeight - 140) / hgt);
+  zoomFit();
+}
+
+// その行より前で一番近い見出しの行（なければ -1）
+function headingLineFor(blockLine) {
+  const lines = $$('h1[data-line], h2[data-line], h3[data-line], h4[data-line], h5[data-line], h6[data-line]', $('#doc'))
+    .map((x) => Number(x.dataset.line))
+    .filter((l) => l <= blockLine);
+  return lines.length ? Math.max(...lines) : -1;
 }
 
 // 閉じた折りたたみの中へ移動するときは、先に開く
@@ -514,6 +690,15 @@ function turn(delta) {
 }
 
 function onKey(e) {
+  // 拡大表示の間は、ページ送りなどを止めて拡大表示の操作だけにする
+  if (isZoomOpen()) {
+    if (e.key === 'Escape') closeZoom();
+    else if (e.key === '+' || e.key === '=') zoomTo(Z.s * 1.25);
+    else if (e.key === '-') zoomTo(Z.s / 1.25);
+    else if (e.key === '0') zoomFit();
+    else return;
+    return e.preventDefault();
+  }
   if (e.key === 'Escape' && stripArmed()) return disarmStrip();
   if (S.editing && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); return saveEdit(); }
   // 入力欄の中では、ブラウザ標準の元に戻す（文字単位）を使う
@@ -593,6 +778,7 @@ function renderDoc() {
     if (!/^[a-z]+:/i.test(src)) img.src = '/api/raw?path=' + encodeURIComponent(posix.join(base, safeDecode(src)));
   }
 
+  setupZoomables(doc);
   applyFold();
   markAsked();
   paintStrip();
@@ -809,7 +995,12 @@ function setupDoc() {
       hl('mdv-hover', s ? [s.range] : []);
     });
   });
-  doc.addEventListener('mouseleave', () => hl('mdv-hover', []));
+  doc.addEventListener('mouseleave', () => { hl('mdv-hover', []); setMmdHover(null); });
+  // 図の上では、指している部品を光らせる
+  doc.addEventListener('mouseover', (e) => {
+    const view = e.target.closest?.('.mmd-view');
+    setMmdHover(view && !stripArmed() && !view.querySelector('.mmd-error') ? mmdPartAt(e.target, view) : null);
+  });
   let tocRaf = 0;
   $('#scroller').addEventListener('scroll', () => {
     if (tocRaf) return;
@@ -835,7 +1026,14 @@ function onDocClick(e) {
     if (card) { e.preventDefault(); toggleStripPick(card); }
     return;
   }
-  if (e.target.closest('a, button, .composer, textarea')) return;
+  if (e.target.closest('button, .composer, textarea')) return;
+  // 図の上: 部品（または図全体）への質問
+  const view = e.target.closest('.mmd-view');
+  if (view) {
+    if (!view.querySelector('.mmd-error') && window.getSelection().isCollapsed) askAboutDiagram(view.closest('.mmd'), mmdPartAt(e.target, view));
+    return;
+  }
+  if (e.target.closest('a')) return;
   const sel = window.getSelection();
   let container;
   let sentence;
@@ -873,17 +1071,16 @@ function onDocClick(e) {
   const top = container.closest('[data-line]') ?? container.querySelector(':scope > [data-line]');
   if (!top || top.closest('.qa')) return deselect();
   const blockLine = Number(top.dataset.line);
-  const headings = $$('h1[data-line], h2[data-line], h3[data-line], h4[data-line], h5[data-line], h6[data-line]', $('#doc'))
-    .map((x) => Number(x.dataset.line))
-    .filter((l) => l <= blockLine);
-  const after = top.closest('pre') ?? top;
-  openComposer(after, range, { sentence, draft, blockEnd: Number(top.dataset.end), headingLine: headings.length ? Math.max(...headings) : -1 });
+  // 図のコードの行なら、質問欄は図の枠の後ろに出す
+  const after = top.closest('.mmd') ?? top.closest('pre') ?? top;
+  openComposer(after, range, { sentence, draft, blockEnd: Number(top.dataset.end), headingLine: headingLineFor(blockLine) });
 }
 
 // 質問欄を閉じる（対象の文のハイライトも消す）
 function removeComposer() {
   $('.composer')?.remove();
   hl('mdv-target', []);
+  $$('.mmd-target').forEach((el) => el.classList.remove('mmd-target'));
 }
 
 function closeComposer() {

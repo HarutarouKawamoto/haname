@@ -243,9 +243,34 @@ svg { display: block; }
 .doc .mmd:not(.show-src) > pre { display: none; }
 .doc .mmd.show-src > .mmd-view:not(:has(.mmd-error)) { display: none; }
 .doc .mmd.show-src > .mmd-view:has(.mmd-error) { min-height: 0; padding: 8px 12px; margin-bottom: 6px; background: none; }
-.doc .mmd-toggle { position: absolute; top: 6px; right: 6px; z-index: 1; opacity: .5; transition: opacity .15s; }
-.doc .mmd:hover .mmd-toggle, .doc .mmd-toggle:focus-visible { opacity: 1; }
-.doc .mmd:has(.mmd-error) > .mmd-toggle { display: none; }
+.doc .mmd-tools { position: absolute; top: 6px; right: 6px; z-index: 1; display: flex; gap: 2px; opacity: .5; transition: opacity .15s; }
+.doc .mmd:hover .mmd-tools, .doc .mmd-tools:focus-within { opacity: 1; }
+.doc .mmd:has(.mmd-error) .mmd-tools { display: none; }
+/* 図の部品への質問: 指している部品・質問中の部品・質問済みの部品を桜色で示す */
+.doc .mmd-view { cursor: pointer; }
+.doc .mmd-view :is(g.node, g.edgeLabel, g.cluster, text, g) { transition: filter .12s; }
+.doc .mmd-view .mmd-hover { filter: drop-shadow(0 0 3px var(--sakura)) drop-shadow(0 0 1px var(--sakura)); }
+.doc .mmd-view .mmd-asked { filter: drop-shadow(0 0 2px var(--sakura-deep)); }
+.doc .mmd-view .mmd-target { filter: drop-shadow(0 0 4px var(--sakura-deep)) drop-shadow(0 0 2px var(--sakura-deep)); }
+.doc .mmd-view.mmd-asked-all { outline: 1.5px dashed var(--sakura-deep); outline-offset: -6px; }
+.doc .mmd-view.mmd-target { outline: 2px solid var(--sakura-deep); outline-offset: -6px; filter: none; }
+
+/* 拡大表示のボタン（表・画像） */
+.doc .zoom-wrap { position: relative; display: block; margin: 0 0 1em; }
+.doc .zoom-wrap.inline { display: inline-block; margin: 0; max-width: 100%; vertical-align: top; }
+.doc .zoom-wrap > table { margin: 0; }
+.doc .zoom-wrap > .zoom-btn { position: absolute; top: 4px; right: 4px; opacity: 0; transition: opacity .15s; background: var(--bg); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.doc .zoom-wrap:hover > .zoom-btn, .doc .zoom-wrap > .zoom-btn:focus-visible { opacity: 1; }
+
+/* 拡大表示 */
+.zoom { position: fixed; inset: 0; z-index: 1000; background: rgba(20, 20, 24, .62); backdrop-filter: blur(2px); overflow: hidden; cursor: grab; touch-action: none; }
+.zoom:active { cursor: grabbing; }
+.zoom .zoom-content { position: absolute; left: 0; top: 0; transform-origin: 0 0; width: max-content; max-width: none; margin: 0; padding: 20px; background: var(--bg); border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.zoom .zoom-content > table { display: table; overflow: visible; margin: 0; }
+.zoom .zoom-content > pre { margin: 0; overflow: visible; }
+.zoom .zoom-content > img { display: block; max-width: none; }
+.zoom .zoom-content > svg { display: block; max-width: none; }
+.zoom .zoom-bar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 4px; padding: 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 6px 24px rgba(0,0,0,.2); cursor: default; }
 .doc .mmd-error { display: inline-flex; align-items: center; gap: 8px; color: var(--danger); font-size: .9em; }
 .doc .mmd-error svg { width: 16px; height: 16px; }
 
