@@ -83,7 +83,33 @@ function safeHtml(src) {
   }
   return out + esc(src.slice(last));
 }
+// 「HTML のかたまり」として扱う行は、折りたたみのタグだけの行と HTML のコメントに限る。
+// markdown-it の標準では <div> などで始まる行から次の空行までが丸ごと HTML になり、
+// 中の Markdown が描画されなくなるため。折りたたみのタグの行は 1 行ずつ区切るので、
+// <summary> の直後に空行がなくても、続く行は Markdown として描画される。
+const FOLD_PART = String.raw`(?:<\/?(?:details|summary)\b[^>]*>|<summary\b[^>]*>[^<\n]*<\/summary>)`;
+const FOLD_LINE = new RegExp(String.raw`^${FOLD_PART}(?:[ \t]*${FOLD_PART})*[ \t]*$`, 'i');
+function foldTagLines(original) {
+  return (state, startLine, endLine, silent) => {
+    if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+    const lineAt = (n) => state.src.slice(state.bMarks[n] + state.tShift[n], state.eMarks[n]);
+    const first = lineAt(startLine);
+    if (!first.startsWith('<')) return false;
+    if (first.startsWith('<!--')) return original(state, startLine, endLine, silent);
+    if (!FOLD_LINE.test(first)) return false;
+    if (silent) return true;
+    let next = startLine + 1;
+    while (next < endLine && state.sCount[next] - state.blkIndent < 4 && FOLD_LINE.test(lineAt(next))) next++;
+    const token = state.push('html_block', '', 0);
+    token.map = [startLine, next];
+    token.content = state.getLines(startLine, next, state.blkIndent, true);
+    state.line = next;
+    return true;
+  };
+}
 function allowFolding(m) {
+  const original = m.block.ruler.__rules__.find((r) => r.name === 'html_block').fn;
+  m.block.ruler.at('html_block', foldTagLines(original), { alt: ['paragraph', 'reference', 'blockquote'] });
   m.renderer.rules.html_block = (tokens, i) => safeHtml(tokens[i].content);
   m.renderer.rules.html_inline = (tokens, i) => safeHtml(tokens[i].content);
   return m;
