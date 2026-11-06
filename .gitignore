@@ -14,3 +14,7 @@ Thumbs.db
 
 # デスクトップ版（別の非公開リポジトリ haname-desktop）
 haname-desktop/
+
+# 紹介 PV の出力
+scripts/pv/out/
+scripts/pv/bgm.mp3
