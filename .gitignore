@@ -1,0 +1,13 @@
+# 依存パッケージ
+node_modules/
+
+# HanaME（花見）の作業フォルダ（既読の記録・バックアップ・起動中サーバーの情報）
+.haname/
+.mdview/
+
+# 開発環境ごとの設定
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

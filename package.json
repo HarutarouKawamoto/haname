@@ -1,0 +1,21 @@
+{
+  "name": "haname",
+  "version": "0.1.0",
+  "description": "HanaME（花見）— AIが書いた大量の.mdを、要約せずに速く読み、まとめて壁打ちするためのローカルビューア",
+  "type": "module",
+  "bin": {
+    "haname": "bin/haname.js"
+  },
+  "scripts": {
+    "start": "node bin/haname.js"
+  },
+  "engines": {
+    "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "ignore": "^7.0.14",
+    "lucide-static": "^1.69.0",
+    "markdown-it": "^15.0.3"
+  }
+}

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HanaME</title>
+<link rel="icon" type="image/png" href="/brand/favicon.png">
+<link rel="apple-touch-icon" href="/brand/icon-180.png">
+<script src="/boot.js"></script>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main id="reader">
+  <header id="bar">
+    <div class="brand">
+      <img class="logo logo-light" src="/brand/logo-light.png" alt="HanaME（花見）">
+      <img class="logo logo-dark" src="/brand/logo-dark.png" alt="HanaME（花見）">
+    </div>
+    <div id="filename" class="filename"></div>
+    <div class="group">
+      <span class="view-only group">
+        <button id="edit" class="icon-btn" aria-label="編集する" data-icon="pencil"></button>
+        <button id="toggle-qa" class="icon-btn" aria-label="Q&Aを隠す・表示する" data-icon="eye"></button>
+      </span>
+      <span class="edit-only group">
+        <button id="edit-cancel" class="icon-btn" aria-label="編集をやめる" title="編集をやめる（変更があるときは、もう一度押して確定）" data-icon="x"></button>
+        <button id="edit-save" class="icon-btn" aria-label="保存する" data-icon="save"></button>
+      </span>
+      <span class="gap"></span>
+      <button id="toggle-side" class="icon-btn" aria-label="ファイル一覧を閉じる・開く"></button>
+    </div>
+  </header>
+  <div id="scroller">
+    <article id="doc" class="doc"></article>
+  </div>
+  <footer id="dock">
+    <div class="dock-left">
+      <button id="theme" class="icon-btn" aria-label="昼と夜の配色を切り替える"></button>
+    </div>
+    <div class="dock-center">
+      <button class="pager-btn js-prev" aria-label="前のファイル" data-icon="chevron-left"></button>
+      <span class="page js-page"></span>
+      <button class="pager-btn js-next" aria-label="次のファイル" data-icon="chevron-right"></button>
+    </div>
+    <div class="dock-right view-only group">
+      <button id="strip" class="icon-btn" aria-label="Q&Aをすべて削除" title="Q&Aをすべて削除（もう一度押して確定）" data-icon="eraser"></button>
+      <span class="sep"></span>
+      <button id="copy-prompt" class="icon-btn badge-host" aria-label="未回答の質問があるファイルすべての指示文をコピー" title="未回答の質問があるファイルすべてを、1つの指示文でコピー" data-icon="clipboard-list"><span id="badge" class="badge" hidden></span></button>
+      <button id="copy-full" class="icon-btn" aria-label="未回答の質問があるファイルすべてを中身ごとコピー" title="未回答の質問があるファイルすべてを中身ごとコピー（ブラウザのチャット向け）" data-icon="clipboard-copy"></button>
+    </div>
+  </footer>
+</main>
+<aside id="side">
+  <div id="pager">
+    <button class="icon-btn js-prev" aria-label="前のファイル" data-icon="chevron-left"></button>
+    <span class="page js-page"></span>
+    <button class="icon-btn js-next" aria-label="次のファイル" data-icon="chevron-right"></button>
+  </div>
+  <nav id="tree" aria-label="ファイル一覧"></nav>
+  <nav id="toc" aria-label="目次">
+    <div class="toc-head" data-icon="table-of-contents"></div>
+    <div id="toc-list"></div>
+  </nav>
+</aside>
+<div id="toast" class="toast" hidden></div>
+<div id="pop" class="pop" hidden></div>
+<script src="/vendor/markdown-it.js"></script>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

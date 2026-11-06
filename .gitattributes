@@ -1,0 +1,4 @@
+# 改行を LF に揃える（Windows / macOS / Linux で差分が出ないように）
+* text=auto eol=lf
+*.png binary
+*.webp binary
