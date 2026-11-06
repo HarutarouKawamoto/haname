@@ -63,7 +63,32 @@ function highlight(code, lang) {
   if (!hljs || !name || !hljs.getLanguage(name)) return '';
   try { return hljs.highlight(code, { language: name, ignoreIllegals: true }).value; } catch { return ''; }
 }
-const md = window.markdownit({ html: false, linkify: true, highlight });
+// 生の HTML は描画しない。ただし折りたたみ（<details> / <summary>）だけは使えるようにする。
+// タグはそのまま通さず、こちらで組み立て直す（属性は details の open だけ）。それ以外は文字として表示し、
+// HTML のコメントは GitHub と同じく表示しない。
+const SAFE_TAG = /<(\/?)(details|summary)\b([^>]*)>|<!--[\s\S]*?(?:-->|$)/gi;
+const escapeHtml = window.markdownit().utils.escapeHtml;
+function safeHtml(src) {
+  const esc = escapeHtml;
+  let out = '';
+  let last = 0;
+  for (const m of src.matchAll(SAFE_TAG)) {
+    out += esc(src.slice(last, m.index));
+    last = m.index + m[0].length;
+    if (m[0].startsWith('<!--')) continue;
+    const [, close, name, attrs] = m;
+    const tag = name.toLowerCase();
+    const open = !close && tag === 'details' && /(^|\s)open(\s|=|$)/i.test(attrs) ? ' open' : '';
+    out += `<${close}${tag}${open}>`;
+  }
+  return out + esc(src.slice(last));
+}
+function allowFolding(m) {
+  m.renderer.rules.html_block = (tokens, i) => safeHtml(tokens[i].content);
+  m.renderer.rules.html_inline = (tokens, i) => safeHtml(tokens[i].content);
+  return m;
+}
+const md = allowFolding(window.markdownit({ html: true, linkify: true, highlight }));
 md.core.ruler.push('mdv_srcline', (state) => {
   for (const t of state.tokens) {
     if (t.map && t.level === 0 && t.nesting !== -1) {
@@ -72,7 +97,86 @@ md.core.ruler.push('mdv_srcline', (state) => {
     }
   }
 });
-const mdPlain = window.markdownit({ html: false, linkify: true, highlight });
+const mdPlain = allowFolding(window.markdownit({ html: true, linkify: true, highlight }));
+
+// ---------- Mermaid ----------
+// ```mermaid のコードブロックを図にする。Mermaid（約 3.5MB）は図があるページで初めて読み込む。
+// securityLevel: 'strict' で、図の中の HTML・スクリプト・クリック動作を無効にする。
+// 図とコードは右上のボタンで切り替えられる（コードの表示では、これまでどおり 1 行ずつ質問できる）。
+let mermaidLoading = null;
+function loadMermaid() {
+  mermaidLoading ??= new Promise((resolve, reject) => {
+    const s = h('script', { src: '/vendor/mermaid.js' });
+    s.onload = () => (window.mermaid ? resolve(window.mermaid) : reject(new Error('mermaid')));
+    s.onerror = () => { mermaidLoading = null; reject(new Error('mermaid')); };
+    document.head.append(s);
+  });
+  return mermaidLoading;
+}
+const isDarkTheme = () =>
+  (document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
+
+function setMmdSource(box, on) {
+  box.classList.toggle('show-src', on);
+  const btn = box.querySelector('.mmd-toggle');
+  btn.innerHTML = icon(on ? 'workflow' : 'code');
+  btn.setAttribute('aria-label', on ? '図を表示' : 'コードを表示');
+}
+
+let mmdSeq = 0;
+async function renderMermaid(root = $('#doc')) {
+  // 図の枠を作る（コードブロックは枠の中に残し、図と切り替える）
+  for (const code of $$('pre > code.language-mermaid', root)) {
+    const pre = code.parentElement;
+    if (pre.parentElement.classList.contains('mmd')) continue;
+    const box = h('div', { class: 'mmd' });
+    const toggle = h('button', { class: 'icon-btn mmd-toggle' });
+    toggle.onclick = () => setMmdSource(box, !box.classList.contains('show-src'));
+    pre.before(box);
+    box.append(toggle, h('div', { class: 'mmd-view' }), pre);
+    // 図のコードの行に質問が付いているときは、コードを表示して始める
+    const q = box.nextElementSibling;
+    const target = q?.classList.contains('qa-q') ? q.querySelector('.qa-target')?.textContent : '';
+    setMmdSource(box, !!target && code.textContent.includes(target));
+  }
+  const boxes = $$('.mmd', root);
+  if (!boxes.length) return;
+  const fail = (box, msg) => {
+    box.querySelector('.mmd-view').replaceChildren(h('div', { class: 'mmd-error' }, iconEl('triangle-alert'), h('span', {}, msg)));
+    setMmdSource(box, true);
+  };
+  let mermaid;
+  try { mermaid = await loadMermaid(); } catch { boxes.forEach((b) => fail(b, '図を表示できませんでした')); return; }
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'strict',
+    theme: isDarkTheme() ? 'dark' : 'neutral',
+    fontFamily: getComputedStyle(document.body).fontFamily,
+  });
+  for (const box of boxes) {
+    if (!box.isConnected) continue;
+    const id = `mmd-${++mmdSeq}`;
+    try {
+      const { svg } = await mermaid.render(id, box.querySelector('pre code').textContent);
+      if (!box.isConnected) continue;
+      const view = box.querySelector('.mmd-view');
+      view.innerHTML = svg;
+      // 念のため、図の中のリンク先はすべて外す（strict でも click 指定の枠に <a> が残るため）
+      for (const a of view.querySelectorAll('a')) {
+        a.removeAttribute('href');
+        a.removeAttributeNS('http://www.w3.org/1999/xlink', 'href');
+      }
+    } catch {
+      document.getElementById('d' + id)?.remove(); // 失敗したときに Mermaid が残す一時的な要素
+      if (box.isConnected) fail(box, '図の書き方に誤りがあります');
+    }
+  }
+}
+
+// 閉じた折りたたみの中へ移動するときは、先に開く
+function revealInFolds(el) {
+  for (let d = el.closest('details:not([open])'); d; d = d.parentElement?.closest('details:not([open])')) d.open = true;
+}
 
 const posix = {
   dirname: (p) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : ''),
@@ -140,8 +244,9 @@ function setupTheme() {
     document.documentElement.dataset.theme = next;
     store.set('theme', next);
     paint();
+    renderMermaid(); // 図の配色も切り替える
   };
-  media.addEventListener('change', paint);
+  media.addEventListener('change', () => { paint(); renderMermaid(); });
   paint();
 }
 
@@ -466,6 +571,7 @@ function renderDoc() {
   markAsked();
   paintStrip();
   buildToc();
+  renderMermaid(doc);
 }
 
 // ---------- 目次 ----------
@@ -485,7 +591,7 @@ function buildToc() {
   for (const el of heads) {
     const lv = Number(el.tagName[1]) - top + 1;
     const item = h('button', { class: `toc-item lv${lv}`, style: `padding-left:${(lv - 1) * 14 + 8}px`, title: el.textContent }, el.textContent);
-    item.onclick = () => el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    item.onclick = () => { revealInFolds(el); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     list.append(item);
     tocEntries.push({ el, item });
   }
@@ -502,6 +608,7 @@ function updateTocActive() {
   const limit = $('#scroller').getBoundingClientRect().top + 80;
   let active = tocEntries[0];
   for (const e of tocEntries) {
+    if (!e.el.getClientRects().length) continue; // 閉じた折りたたみの中の見出し
     if (e.el.getBoundingClientRect().top <= limit) active = e;
     else break;
   }
@@ -526,6 +633,7 @@ function jumpTo(id, kind) {
   const el = $(`.qa[data-id="${id}"][data-kind="${kind}"]`);
   if (!el) return;
   if (el.classList.contains('hidden-thread')) { S.folded.delete(el.dataset.thread); applyFold(); }
+  revealInFolds(el);
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   el.classList.remove('flash');
   void el.offsetWidth;
@@ -538,7 +646,7 @@ const CONTAINER = 'p, li, td, th, h1, h2, h3, h4, h5, h6, pre, dt, dd';
 function containerOf(node) {
   const el = node?.nodeType === 3 ? node.parentElement : node;
   const c = el?.closest?.(CONTAINER);
-  if (!c || !$('#doc').contains(c) || c.closest('.composer, .qa-q, .qa-head, .qa-target')) return null;
+  if (!c || !$('#doc').contains(c) || c.closest('.composer, .qa-q, .qa-head, .qa-target, .mmd-view')) return null;
   return c;
 }
 

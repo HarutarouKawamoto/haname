@@ -108,6 +108,8 @@ haname init
 
 - ツリーの **●** は未読、**○** は開いた後に更新されたファイルです。AI が回答を書き込んだファイルが一目で分かります。
 - コードブロックは、言語名（` ```ts ` など）が書いてあれば VS Code と同じ配色で色分けされます（昼は Light+、夜は Dark+）。
+- ` ```mermaid ` のコードブロックは、[Mermaid](https://mermaid.js.org/) の図として表示します。右上のボタンで図とコードを切り替えられます（コードの表示では、1 行ずつ質問できます）。
+- `<details>` / `<summary>` の折りたたみが使えます。目次や Q&A の番号から閉じた折りたたみの中へ移動すると、自動で開きます。
 - ボタンは文字を使わず、アイコン（Lucide）だけです。
 
 ### 質問する
@@ -257,7 +259,8 @@ AI ツールの設定・指示のファイルも、初期設定では表示し�
 - サーバーは `127.0.0.1` だけで待ち受け、外部からは接続できません。
 - DNS リバインディング・他サイトからの書き込み（CSRF）・クリックジャッキングを防ぐ対策を入れています。
 - 読み書きできるのは、起動したフォルダの中の、ツリーに表示される .md だけです（`../` やシンボリックリンクでフォルダの外を指すものは拒否）。
-- Markdown の生の HTML は描画せず、ページには CSP を設定しています。
+- Markdown の生の HTML は描画せず、ページには CSP を設定しています。例外は折りたたみの `<details>` / `<summary>` だけで、属性（`open` 以外）は捨てて組み立て直します。
+- Mermaid の図は `securityLevel: 'strict'` で描き、図の中のリンク・スクリプト・クリック動作は無効にしています。
 
 **気をつけること**: .md の中身はそのまま AI への指示文に入ります。他人から受け取った .md に AI 向けの指示が埋め込まれていると、AI がそれに従う可能性があります（プロンプトインジェクション）。
 
@@ -272,13 +275,16 @@ bin/haname.js     CLI（起動・prompt・init・clean・check）
 lib/server.js     ローカルサーバー（ファイル一覧・読み書き・変更通知・移動・元に戻す）
 lib/qa.js         Q&A ブロックの読み取り・追加・削除、編集時の本文と Q&A の分離・再合成
 lib/prompt.js     AI への指示文（画面と CLI で共通）
-public/           画面（index.html / app.js / style.css / boot.js / brand/）
+public/           画面（index.html / app.js / style.css / boot.js / brand/ / vendor/）
 skills/           AI 用のスキル（haname init で .claude/skills/ に置く）
 docs/SPEC.md      仕様
 docs/images/      README の画像
+scripts/update-mermaid.mjs  Mermaid の取り込み（node scripts/update-mermaid.mjs <版>）
 ```
 
 依存パッケージ: [markdown-it](https://github.com/markdown-it/markdown-it)（Markdown の描画）、[highlight.js](https://highlightjs.org/)（コードの色分け）、[lucide-static](https://lucide.dev/)（アイコン）、[ignore](https://github.com/kaelzhang/node-ignore)（.gitignore の判定）
+
+Mermaid は npm の依存には入れず、ブラウザ用の 1 ファイル（`public/vendor/mermaid.min.js`、MIT）だけを取り込んでいます（パッケージ全体は 140MB を超えるため）。中に含まれる部品のライセンス表示は [public/vendor/mermaid.LICENSES.txt](public/vendor/mermaid.LICENSES.txt) にあります。
 
 ## ライセンス
 
