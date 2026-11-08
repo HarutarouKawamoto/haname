@@ -432,6 +432,12 @@ async function init() {
     if (data.open) return openFile(data.open);
     onFsChange(data.paths);
   };
+  // 変更の通知は取りこぼすことがある（監視の取りこぼし、スリープなどでの接続切れ、つながるまでの間の変更）。
+  // そのため、つながったとき・ウィンドウに戻ったとき・一定の間隔でも、ファイルの状態を確かめ直す
+  es.onopen = refresh;
+  window.addEventListener('focus', refresh);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+  setInterval(() => { if (!document.hidden) refresh(); }, 10000);
 }
 
 // 昼（Sakura Hanami）と夜（夜桜）。未選択なら OS の設定に従う
@@ -488,11 +494,30 @@ function setHideQA(on) {
 }
 
 // ---------- ツリー ----------
-async function loadTree() {
-  S.tree = await api.get('/api/tree');
-  S.order = flatten(buildTree(S.tree)).map((n) => n.path);
-  renderTree();
-  updateNav();
+// 読み込みは 1 つずつ順に行う（同時に走らせると、古い結果が後から届いて新しい結果を上書きすることがある）
+let treeChain = Promise.resolve();
+let treeJson = '';
+function loadTree() {
+  const run = treeChain.then(async () => {
+    const tree = await api.get('/api/tree');
+    const json = JSON.stringify(tree);
+    const changed = json !== treeJson;
+    treeJson = json;
+    S.tree = tree;
+    S.order = flatten(buildTree(S.tree)).map((n) => n.path);
+    // 開いているファイルについては、表示中の内容のほうが新しければそちらを使う
+    if (S.file) patchTree(S.current, S.file);
+    if (changed) renderTree();
+    updateNav();
+  });
+  treeChain = run.catch(() => {});
+  return run;
+}
+
+// 一覧の中の 1 ファイルの情報を、読み込んだファイルの内容で更新する（新しいほうを残す）
+function patchTree(p, file) {
+  const f = S.tree?.files.find((x) => x.path === p);
+  if (f && file.mtime >= f.mtime) { f.mtime = file.mtime; f.unanswered = file.unanswered; }
 }
 
 const cmp = (a, b) => a.localeCompare(b, 'ja', { numeric: true, sensitivity: 'base' });
@@ -618,6 +643,7 @@ async function moveFiles(paths, dest, anchorEl) {
 }
 
 // ---------- ファイル表示 ----------
+let openSeq = 0;
 async function openFile(p, { keepScroll = false } = {}) {
   if (p !== S.current && stripArmed()) disarmStrip();
   if (S.editing) {
@@ -626,19 +652,29 @@ async function openFile(p, { keepScroll = false } = {}) {
     if (isDirty()) return nudge('#edit-save');
     leaveEdit();
   }
-  const prevDir = S.current ? posix.dirname(S.current) : null;
-  const scroller = $('#scroller');
-  const scroll = scroller.scrollTop;
+  // 続けて開いたときは、最後に頼んだものだけを表示する（先に頼んだ結果が後から届いても使わない）
+  const seq = ++openSeq;
   let file;
   try {
     file = await api.get('/api/file?path=' + encodeURIComponent(p));
   } catch (e) {
-    if (e.status === 404) { await loadTree(); if (S.order[0]) return openFile(S.order[0]); return renderEmpty(); }
+    if (seq !== openSeq) return;
+    if (e.status === 404) {
+      await loadTree();
+      if (seq !== openSeq) return;
+      if (S.order[0]) return openFile(S.order[0]);
+      return renderEmpty();
+    }
     throw e;
   }
+  if (seq !== openSeq) return;
+  const prevDir = S.current ? posix.dirname(S.current) : null;
+  const scroller = $('#scroller');
+  const scroll = scroller.scrollTop;
   const changedFile = S.current !== p;
   S.current = p;
   S.file = file;
+  patchTree(p, file);
   if (changedFile) { S.folded = new Set(); S.selection = new Set([p]); }
   location.hash = encodeURIComponent(p);
   renderDoc();
@@ -670,11 +706,13 @@ function updateNav() {
   $$('.js-next').forEach((b) => { b.disabled = i < 0 || i >= S.order.length - 1; });
   $$('.js-page').forEach((p) => { p.textContent = i >= 0 ? `${i + 1} / ${S.order.length}` : ''; });
   $('#filename').textContent = S.current ?? '';
-  // バッジはフォルダ全体の未回答の数（開いているファイルは最新の読み込み結果を使う）
-  const n = (S.tree?.files ?? []).reduce(
-    (sum, f) => sum + (f.path === S.current && S.file ? S.file.unanswered.length : (f.unanswered?.length ?? 0)),
-    0,
-  );
+  // バッジはフォルダ全体の未回答の数。
+  // 開いているファイルは、表示中の内容と一覧のうち新しいほうを使う
+  // （質問を書きかけの間や編集モードの間は表示を読み直さないので、一覧のほうが新しいことがある）
+  const n = (S.tree?.files ?? []).reduce((sum, f) => {
+    const own = f.path === S.current && S.file && S.file.mtime >= f.mtime;
+    return sum + (own ? S.file.unanswered.length : (f.unanswered?.length ?? 0));
+  }, 0);
   const badge = $('#badge');
   badge.hidden = !n;
   badge.textContent = n;
@@ -1307,8 +1345,11 @@ async function copyPrompt(full) {
       await navigator.clipboard.writeText(await promptText(full));
     }
   } catch {
+    refresh();
     return toast('x', '');
   }
+  // コピーした内容（その時点のファイル）とバッジをそろえる
+  refresh();
   const prev = btn.querySelector('svg').outerHTML;
   btn.querySelector('svg').outerHTML = icon('check');
   btn.classList.add('done');
@@ -1316,18 +1357,31 @@ async function copyPrompt(full) {
 }
 
 // ---------- ファイルの変更 ----------
+// 通知は少し待ってまとめる。待つ間に届いた通知のファイルも、すべて対象に残す
 let fsTimer;
+let fsPaths = new Set();
 function onFsChange(paths) {
+  for (const p of paths) fsPaths.add(p);
   clearTimeout(fsTimer);
-  fsTimer = setTimeout(async () => {
-    await loadTree();
-    if (!S.current) { if (S.order[0]) openFile(S.order[0]); return; }
-    if (!paths.includes(S.current)) return;
-    const ta = $('.composer textarea');
-    if (ta && ta.value.trim()) { S.pendingReload = true; return; }
-    removeComposer();
-    openFile(S.current, { keepScroll: true });
-  }, 120);
+  fsTimer = setTimeout(syncFs, 120);
+}
+
+// 通知がなくても、ファイルの状態を確かめ直す（変わっていなければ何もしない）
+const refresh = () => onFsChange([]);
+
+async function syncFs() {
+  const paths = fsPaths;
+  fsPaths = new Set();
+  try { await loadTree(); } catch { return; }
+  if (!S.current) { if (S.order[0]) openFile(S.order[0]); return; }
+  // 通知に含まれていなくても、開いているファイルの更新時刻が変わっていれば（消えていれば）読み直す
+  const f = S.tree.files.find((x) => x.path === S.current);
+  if (!paths.has(S.current) && f && S.file && f.mtime === S.file.mtime) return;
+  if (S.editing) return; // 編集中は表示を差し替えない（バッジは一覧の新しい数で出る）
+  const ta = $('.composer textarea');
+  if (ta && ta.value.trim()) { S.pendingReload = true; return; }
+  removeComposer();
+  openFile(S.current, { keepScroll: true });
 }
 
 // ---------- トースト・確認 ----------
