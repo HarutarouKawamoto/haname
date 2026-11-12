@@ -282,4 +282,4 @@ Mermaid は npm の依存には入れず、ブラウザ用の 1 ファイル（`
 
 ## ライセンス
 
-MIT
+[MIT](LICENSE)
