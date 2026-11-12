@@ -1,0 +1,45 @@
+# 紹介サイト（site/）を GitHub Pages に公開する。
+# 公開するのはページの本体（index.html・style.css・画像）だけ。site/demo/ と site/tools/ は含めない。
+name: 紹介サイトを公開する
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 公開するファイルを集める
+        run: |
+          mkdir _site
+          cp site/index.html site/style.css site/favicon.png _site/
+          cp -r site/images _site/
+          if [ -f site/apple-touch-icon.png ]; then cp site/apple-touch-icon.png _site/; fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

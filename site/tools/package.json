@@ -1,0 +1,13 @@
+{
+  "name": "haname-site-tools",
+  "private": true,
+  "description": "紹介サイト（site/）のスクリーンショットとループ動画を撮る道具。ツール本体の package.json とは別",
+  "type": "module",
+  "scripts": {
+    "capture": "node capture.mjs"
+  },
+  "devDependencies": {
+    "ffmpeg-static": "5.3.0",
+    "playwright": "1.64.1"
+  }
+}
