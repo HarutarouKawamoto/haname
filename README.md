@@ -2,21 +2,13 @@
   <img src="public/brand/logo-light.png" alt="HanaME（花見）" height="80">
 </p>
 
-<h3 align="center">生成された md ファイルを、まとめて読んで、まとめて聞く。</h3>
+<h3 align="center"> md ファイルを、まとめて読んで、まとめて聞く。</h3>
 
 <p align="center">
   AI が書いた大量の .md を、要約せずに読み切るためのローカルビューア。<br>
   <b>API 不要。</b>いま使っている AI ツールに、そのままつながります。
 </p>
 
-<!-- 紹介動画: GitHub の編集画面でこの行の下に haname-pv.mp4 をドラッグすると、動画が添付されて埋め込まれる -->
-
-
-Uploading haname-pv.mp4…
-
-
-
-<p align="center"><sub>紹介動画の BGM：<a href="https://opentracks.com/bgm/detail/23966">或る雨の夜</a> / のる（OpenTracks）</sub></p>
 
 <p align="center">
   <img src="docs/images/screen-light.png" alt="HanaME の画面。本文の文に質問を書き込み、見出しの下に AI の回答が入っている" width="840">
