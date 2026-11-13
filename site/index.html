@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HanaME（花見）— AI が書いた .md を、まとめて読んで、まとめて聞く</title>
+  <meta name="description" content="AI が書いた大量の .md を、要約せずに読み切るためのローカルビューア。分からない文をクリックして質問を書き込み、まとめて AI に渡すと、答えが本文の中に届きます。API 不要。">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="HanaME（花見）">
+  <meta property="og:description" content="AI が書いた大量の .md を、まとめて読んで、まとめて聞く。API 不要のローカルビューア。">
+  <meta property="og:image" content="https://harutaroukawamoto.github.io/haname/images/og.jpg">
+  <meta property="og:url" content="https://harutaroukawamoto.github.io/haname/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#ECEBF0">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Old+Mincho:wght@500;700;900&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#main">本文へ移動</a>
+
+  <header class="top">
+    <a class="mark" href="./" aria-label="HanaME（花見）トップ">
+      <span class="mark-ja">花見</span>
+      <span class="mark-en">HanaME</span>
+    </a>
+    <nav aria-label="ページ内">
+      <a href="#how">使い方</a>
+      <a href="#start">はじめかた</a>
+      <a href="https://github.com/HarutarouKawamoto/haname">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-text">
+        <h1 id="hero-title" class="hero-name"><span>花見</span></h1>
+        <div class="hero-copy">
+          <p class="hero-lead">md ファイルを、<br>まとめて読んで、<br>まとめて聞く。</p>
+          <p class="hero-sub">AI が書いた大量の .md を、要約せずに読み切るためのローカルビューアです。分からない文には、その場で質問を書き込めます。いま使っている AI ツールが、本文の中に答えを書き込みます。</p>
+          <p class="hero-actions">
+            <a class="btn" href="#start">はじめかたを見る</a>
+            <a class="link" href="https://github.com/HarutarouKawamoto/haname">GitHub でソースを見る</a>
+          </p>
+        </div>
+      </div>
+      <figure class="hero-shot shot">
+        <img src="images/answered.webp" width="2560" height="1600" alt="HanaME の画面。左にレビューの .md、右にフォルダのツリー。見出しの下に AI の回答が 2 つ入り、本文の文に付けた質問が桜色の枠で並んでいる" fetchpriority="high">
+      </figure>
+    </section>
+
+    <section class="problem" aria-labelledby="problem-title">
+      <div class="problem-text">
+        <h2 id="problem-title">大量の md ファイル、<br>読み切れていますか？</h2>
+        <p>AI と開発していると、レビュー・設計・調査の .md が次々に届きます。開発の速さに、読む側が追い付きません。</p>
+        <ul class="plain">
+          <li>1 つ 1 つが長く、数も多い</li>
+          <li>分からない一文が出るたびに、チャットへ移って聞き直す</li>
+          <li>往復が面倒になって、要約で済ませたり、読み飛ばしたりする</li>
+        </ul>
+        <p>HanaME は、この往復を 1 回にまとめます。</p>
+      </div>
+      <figure class="problem-shot shot">
+        <img src="images/hover.webp" width="1980" height="1120" loading="lazy" alt="レビューの本文にマウスを乗せたところ。乗せた 1 文だけが桜色にハイライトされている">
+        <figcaption>マウスを乗せた 1 文だけが、桜色に浮かびます。</figcaption>
+      </figure>
+    </section>
+
+    <section id="how" class="how" aria-labelledby="how-title">
+      <h2 id="how-title" class="section-title">使い方は 3 段階</h2>
+
+      <ol class="steps">
+        <li class="step">
+          <div class="step-text">
+            <h3><span class="step-no" aria-hidden="true">1</span>読む</h3>
+            <p>気になった文をクリックすると、その文への質問欄が開きます。質問は何個でも、何ファイルにまたがっても構いません。言葉をなぞれば「〇〇とは？」の下書き付きで開きます。</p>
+          </div>
+          <div class="step-shots">
+            <figure class="shot">
+              <img src="images/compose.webp" width="1980" height="910" loading="lazy" alt="「保存の時点で、データベースに重なりを拒ませてください。」の文の下に質問欄が開き、「アプリ側でロックするのではだめ？」と書いている">
+              <figcaption>文をクリックして、その場で書く</figcaption>
+            </figure>
+            <figure class="shot">
+              <img src="images/term.webp" width="1980" height="618" loading="lazy" alt="「排他制約」という言葉をなぞると、「「排他制約」とは？」と下書きされた質問欄が開く">
+              <figcaption>言葉をなぞると、下書き付き</figcaption>
+            </figure>
+          </div>
+        </li>
+
+        <li class="step">
+          <div class="step-text">
+            <h3><span class="step-no" aria-hidden="true">2</span>まとめて聞く</h3>
+            <p>書いた質問は、すべて 1 つの指示文にまとまります。フォルダ全体の未回答の数が、ボタンのバッジに出ます。渡し方は、使っている AI ツールに合わせて選べます。</p>
+          </div>
+          <div class="step-shots">
+            <figure class="shot shot-bar">
+              <img src="images/dock.webp" width="1980" height="128" loading="lazy" alt="画面下のバー。右側の「指示文をコピー」ボタンに、未回答の数 3 のバッジが付いている">
+              <figcaption>未回答の質問が 3 つ。右の 2 つのボタンで、指示文か中身ごとをコピー</figcaption>
+            </figure>
+            <table class="ways">
+              <caption>AI ツールへの渡し方</caption>
+              <thead>
+                <tr><th scope="col">AI ツール</th><th scope="col">やること</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Claude Code など、スキルが使えるもの</td><td>「HanaME の質問に答えて」と頼むだけ</td></tr>
+                <tr><td>ファイルを読み書きできる AI ツール</td><td>指示文をコピーして、貼り付ける</td></tr>
+                <tr><td>ブラウザの AI チャット</td><td>中身ごとコピーして貼り付け、返ってきたファイルで上書きする</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </li>
+
+        <li class="step">
+          <div class="step-text">
+            <h3><span class="step-no" aria-hidden="true">3</span>答えが本文の中に届く</h3>
+            <p>AI が .md に回答を書き込むと、画面がすぐ更新されます。回答は見出しのすぐ下に入るので、読みながら答え合わせができます。</p>
+          </div>
+          <figure class="shot step-video">
+            <video src="images/loop-ask.mp4" poster="images/loop-ask-poster.webp" width="1280" height="800" muted loop playsinline preload="none" data-autoplay aria-label="文をクリックして質問を書き、少し後に見出しの下へ AI の回答が入る様子"></video>
+            <figcaption>質問を書いてから、回答が届くまで</figcaption>
+          </figure>
+        </li>
+      </ol>
+    </section>
+
+    <section class="detail" aria-labelledby="detail-title">
+      <h2 id="detail-title" class="section-title">1 文ずつ、1 行ずつ、図の部品まで</h2>
+      <div class="detail-grid">
+        <figure class="shot detail-code">
+          <img src="images/code.webp" width="1980" height="854" loading="lazy" alt="コードブロックの 1 行「return a.from &lt; b.to &amp;&amp; b.from &lt; a.to;」をクリックし、「なぜこの 2 つの比較だけで重なりが分かるの？」と質問している">
+          <figcaption>コードは 1 行ずつ聞けます。配色は VS Code と同じです。</figcaption>
+        </figure>
+        <figure class="shot detail-diagram">
+          <img src="images/diagram.webp" width="2560" height="1600" loading="lazy" alt="Mermaid で描かれた予約の流れの図。「空きの確認」の部品をクリックして質問し、図の下に質問の枠が付いている">
+          <figcaption>Mermaid の図は、箱や矢印のラベルをクリックして質問できます。</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="promise" aria-labelledby="promise-title">
+      <h2 id="promise-title" class="section-title">HanaME が約束すること</h2>
+      <dl class="promises">
+        <div>
+          <dt>要約しない</dt>
+          <dd>原文のまま読みます。AI の長い説明も縮めず、必要なら別の .md に分けて書かせます。</dd>
+        </div>
+        <div>
+          <dt>API がいらない</dt>
+          <dd>API キーも追加の課金もいりません。Claude Code・Codex・Cursor・ブラウザの AI チャットなど、いま使っている AI をそのまま使います。</dd>
+        </div>
+        <div>
+          <dt>ファイルが正本</dt>
+          <dd>質問と回答は、.md に普通の引用として書き込まれます。GitHub や他のエディタでも、そのまま読めます。</dd>
+        </div>
+        <div>
+          <dt>手元だけで動く</dt>
+          <dd>サーバーは自分のパソコンの中だけで動きます。設定ファイルもいりません。</dd>
+        </div>
+      </dl>
+    </section>
+
+    <div class="twilight" aria-hidden="true">
+      <p>日が暮れたら、夜桜で。</p>
+    </div>
+
+    <section class="night" aria-labelledby="night-title">
+      <h2 id="night-title" class="section-title">夜は、夜桜の配色で</h2>
+      <div class="night-lead"><p>左下のボタンで、昼と夜を切り替えられます。夜のコードは VS Code の Dark+ と同じ色です。</p></div>
+      <div class="night-shots">
+        <figure class="shot">
+          <img src="images/night.webp" width="2560" height="1600" loading="lazy" alt="夜の配色の HanaME。暗い背景に、コードの 1 行への質問と、その回答が並んでいる">
+        </figure>
+        <figure class="shot">
+          <img src="images/night-diagram.webp" width="2560" height="1600" loading="lazy" alt="夜の配色で表示した予約の流れの図と、図の部品への質問と回答">
+        </figure>
+      </div>
+    </section>
+
+    <section id="start" class="start" aria-labelledby="start-title">
+      <h2 id="start-title" class="section-title">はじめかた</h2>
+      <div class="start-grid">
+        <div class="need">
+          <h3>必要なもの</h3>
+          <ul class="plain">
+            <li>Node.js 22.23.4 / 24.22.1 / 26.12.1 以降</li>
+            <li>AI ツールを 1 つ（ファイルを読み書きできるもの、またはブラウザの AI チャット）</li>
+          </ul>
+        </div>
+        <ol class="commands">
+          <li>
+            <p>インストールします。<code>npm link</code> しておくと、どのフォルダでも <code>haname</code> が使えます。</p>
+            <pre><code>git clone https://github.com/HarutarouKawamoto/haname.git
+cd haname
+npm install
+npm link</code></pre>
+          </li>
+          <li>
+            <p>読みたいフォルダで起動します。ブラウザが自動で開きます。</p>
+            <pre><code>cd your-project
+haname</code></pre>
+          </li>
+          <li>
+            <p>AI ツールの準備をします（最初に一度だけ）。これで「HanaME の質問に答えて」と頼むだけで通じます。</p>
+            <pre><code>haname init</code></pre>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="pair" aria-labelledby="pair-title">
+      <h2 id="pair-title" class="section-title">頭で理解したら、指で覚える</h2>
+      <div class="pair-grid">
+        <div class="pair-item is-here">
+          <p class="pair-name">HanaME<span>花見</span></p>
+          <p>AI が書いた .md を読んで、質問して、頭で理解する。</p>
+        </div>
+        <a class="pair-item" href="https://harutaroukawamoto.github.io/sumire/">
+          <p class="pair-name">SumiRE<span>墨入れ／菫</span></p>
+          <p>AI が書いたコードを上からなぞって打ち、指で覚える。</p>
+          <span class="pair-go">SumiRE のサイトへ</span>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>HanaME（花見）は <a href="https://github.com/HarutarouKawamoto">HarutarouKawamoto</a> が作っています。MIT ライセンス。</p>
+    <p><a href="https://github.com/HarutarouKawamoto/haname">github.com/HarutarouKawamoto/haname</a></p>
+  </footer>
+
+  <script>
+    // ループ動画は、画面に入ったときだけ再生する。動きを減らす設定なら、自動では再生しない
+    (() => {
+      const videos = document.querySelectorAll('video[data-autoplay]');
+      const still = matchMedia('(prefers-reduced-motion: reduce)');
+      if (still.matches) { videos.forEach((v) => { v.controls = true; }); return; }
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          const v = e.target;
+          if (e.isIntersecting) { v.preload = 'auto'; v.play().catch(() => { v.controls = true; }); }
+          else v.pause();
+        }
+      }, { threshold: 0.4 });
+      videos.forEach((v) => io.observe(v));
+    })();
+  </script>
+</body>
+</html>
